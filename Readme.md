@@ -22,7 +22,7 @@ as seen in .envexample , create a .env file and your IMDB API_KEY
 TO set up the project, run the following command
 
 - `git clone https://github.com/paultrigcode/AccentMovieAPI.git`
-- `cd accenture_test`
+- `cd  into_the_project_folder`
 - `python3 -m venv env`
 - `python manage.py migrate`
 - `python manage.py runserver`
