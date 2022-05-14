@@ -12,12 +12,24 @@ from rest_framework.response import Response
 from rest_framework import status
 from .client import fetch_movie
 from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 
 class MoviesView(APIView):
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                "order",
+                openapi.IN_QUERY,
+                description="e.g order value is dsc to sort the response in descending order ",
+                type=openapi.TYPE_STRING,
+            ),
+        ],
+        operation_description="return the list of movies",
+    )
     def get(self, request):
-        if request.data.get("order"):
-            if request.data["order"] == "dsc":
+        if "order" in request.GET:
+            if request.GET.get("order") == "dsc":
                 movies = Movie.objects.all().order_by("id").reverse()
             else:
                 return Response(
@@ -73,9 +85,20 @@ class MoviesView(APIView):
 
 
 class CommentsView(APIView):
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                "movie_id",
+                openapi.IN_QUERY,
+                description="e.g movie_id value can be 1,2,3 etc ",
+                type=openapi.TYPE_INTEGER,
+            ),
+        ],
+        operation_description="return the list of comments for a particulr movie id, or all comments for all movies",
+    )
     def get(self, request):
-        if request.data.get("movie_id"):
-            comments = Comment.objects.filter(movie_id=request.data["movie_id"])
+        if "movie_id" in request.GET:
+            comments = Comment.objects.filter(movie_id=request.GET.get("movie_id"))
             if comments.count() == 0:
                 return Response(
                     data={"Error": "We don't have movie of this ID in database."},
