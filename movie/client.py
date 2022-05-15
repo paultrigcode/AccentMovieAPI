@@ -1,14 +1,28 @@
 import requests
 from django.conf import settings
+from requests.exceptions import ConnectionError, RequestException, Timeout
 
 
-def fetch_movie(title):
-    """
-    This function basically fetches a movie by title from the omdb database
-    :param: string
+class MovieAPIConnectionException(Exception):
+    pass
 
-    """
-    my_api_key = settings.API_KEY
-    url = f"http://www.omdbapi.com/?t={title}&type=movie&apikey={my_api_key}"
-    response = requests.get(url)
-    return response
+
+class MovieAPINotFoundException(Exception):
+    pass
+
+
+def fetch_movie(title: str):
+    """Fetch a movie by title from omdb database"""
+    api_url = f"http://www.omdbapi.com"
+    params = {"apikey": settings.API_KEY, "type": "movie", "t": title}
+
+    try:
+        response = requests.get(api_url, params=params)
+        data = response.json()
+    except (ConnectionError, Timeout, RequestException):
+        raise MovieAPIConnectionException("Error connecting to imdb API.")
+
+    if response.status_code == requests.codes.ok and data["Response"] == "False":
+        raise MovieAPINotFoundException("A movie with that title does not exist.")
+
+    return data
