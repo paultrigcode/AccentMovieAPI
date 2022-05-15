@@ -1,11 +1,13 @@
-from django.test import TestCase
-from .models import Movie, Rating, Comment
-from .serializers import MovieSerializer, CommentSerializer
 import requests
-from rest_framework.test import APIClient
-from movie.apps import MovieConfig
 from django.apps import apps
 from django.conf import settings
+from django.test import TestCase
+from rest_framework.test import APIClient
+
+from movie.apps import MovieConfig
+
+from .models import Comment, Movie, Rating
+from .serializers import CommentSerializer, MovieSerializer
 
 
 class ModelsCreateTestCase(TestCase):
@@ -13,29 +15,29 @@ class ModelsCreateTestCase(TestCase):
 
     def setUp(self):
         self.new_movie = Movie(
-            Title="Batman Begins",
-            Year="2005",
-            Rated="PG-13",
-            Released="15 Jun 2005",
-            Runtime="140 min",
-            Genre="Action, Adventure, Thriller",
-            Director="Christopher Nolan",
-            Writer="Bob Kane (characters), David S. Goyer (story), Christopher Nolan (screenplay), David S. Goyer (screenplay)",
-            Actors="Christian Bale, Michael Caine, Liam Neeson, Katie Holmes",
-            Plot="After training with his mentor, Batman begins his fight to free crime-ridden Gotham City from corruption.",
-            Language="English, Urdu, Mandarin",
-            Country="USA, UK",
-            Awards="Nominated for 1 Oscar. Another 14 wins & 72 nominations.",
-            Poster="https://m.media-amazon.com/images/M/MV5BZmUwNGU2ZmItMmRiNC00MjhlLTg5YWUtODMyNzkxODYzMmZlXkEyXkFqcGdeQXVyNTIzOTk5ODM@._V1_SX300.jpg",
-            Metascore="70",
-            imdbRating="8.3",
-            imdbVotes="1,150,889",
-            imdbID="tt0372784",
-            Type="movie",
-            DVD="18 Oct 2005",
-            BoxOffice="$204,100,000",
-            Production="Warner Bros. Pictures",
-            Website="http://www.batmanbegins.com/",
+            title="Batman Begins",
+            year="2005",
+            rated="PG-13",
+            released="15 Jun 2005",
+            runtime="140 min",
+            genre="Action, Adventure, Thriller",
+            director="Christopher Nolan",
+            writer="Bob Kane (characters), David S. Goyer (story), Christopher Nolan (screenplay), David S. Goyer (screenplay)",
+            actors="Christian Bale, Michael Caine, Liam Neeson, Katie Holmes",
+            plot="After training with his mentor, Batman begins his fight to free crime-ridden Gotham City from corruption.",
+            language="English, Urdu, Mandarin",
+            country="USA, UK",
+            awards="Nominated for 1 Oscar. Another 14 wins & 72 nominations.",
+            poster="https://m.media-amazon.com/images/M/MV5BZmUwNGU2ZmItMmRiNC00MjhlLTg5YWUtODMyNzkxODYzMmZlXkEyXkFqcGdeQXVyNTIzOTk5ODM@._V1_SX300.jpg",
+            metascore="70",
+            imdb_rating="8.3",
+            imdb_votes="1,150,889",
+            imdb_id="tt0372784",
+            type="movie",
+            dvd="18 Oct 2005",
+            box_office="$204,100,000",
+            production="Warner Bros. Pictures",
+            website="http://www.batmanbegins.com/",
         )
 
     def test_model_can_create_a_movie_object(self):
@@ -44,12 +46,12 @@ class ModelsCreateTestCase(TestCase):
         old_count = Movie.objects.count()
         self.new_movie.save()
         new_count = Movie.objects.count()
-        Movie.objects.create(Title="ForTestCase")
+        Movie.objects.create(title="ForTestCase")
         newest_count = Movie.objects.count()
         self.assertNotEqual(old_count, new_count)
         self.assertNotEqual(newest_count, new_count)
         self.assertEqual(
-            str(self.new_movie), f"{self.new_movie.Title} (id: {self.new_movie.id})"
+            str(self.new_movie), f"{self.new_movie.title} (id: {self.new_movie.id})"
         )
 
     def test_rating_can_be_created_and_joined_with_a_movie_object(self):
@@ -57,26 +59,26 @@ class ModelsCreateTestCase(TestCase):
         self.new_movie.save()
         old_count = Rating.objects.count()
         new_rating = Rating(
-            Source="Internet Movie Database", Value="8.3/10", Movie=self.new_movie
+            source="Internet Movie Database", value="8.3/10", movie=self.new_movie
         )
         new_rating.save()
         self.assertTrue(isinstance(new_rating, Rating))
         new_count = Rating.objects.count()
-        self.assertTrue(self.new_movie.Ratings.filter(id=new_rating.id).get())
+        self.assertTrue(self.new_movie.ratings.filter(id=new_rating.id).get())
         self.assertNotEqual(old_count, new_count)
         self.assertEqual(
             str(new_rating),
-            f"Rating from {new_rating.Source} to {new_rating.Movie.Title})",
+            f"Rating from {new_rating.source} to {new_rating.movie.title})",
         )
 
     def test_comment_can_be_created_and_added_to_existing_Movie(self):
         self.new_movie.save()
         old_count = Comment.objects.count()
-        new_comment = Comment(comment_body="Test comment", movie_id=self.new_movie)
+        new_comment = Comment(body="Test comment", movie=self.new_movie)
         new_comment.save()
         self.assertTrue(isinstance(new_comment, Comment))
         new_count = Comment.objects.count()
-        self.assertTrue(self.new_movie.Comments.filter(id=new_comment.id).get())
+        self.assertTrue(self.new_movie.comments.filter(id=new_comment.id).get())
         self.assertNotEqual(old_count, new_count)
 
 
@@ -137,9 +139,9 @@ class SerializersTestCase(TestCase):
     def test_comments_serializer(self):
         movie = MovieSerializer(data=self.local_data)
         self.assertTrue(movie.is_valid())
-        movie.save()
+        movie = movie.save()
         old_count = Comment.objects.count()
-        new_comment_data = {"comment_body": "Test", "movie_id": movie.data.get("id")}
+        new_comment_data = {"body": "Test", "movie": movie.id}
         new_comment = CommentSerializer(data=new_comment_data)
         self.assertTrue(new_comment.is_valid())
         new_comment.save()
@@ -221,7 +223,7 @@ class MovieRemoteRequestsTestCase(TestCase):
         movie_1 = MovieSerializer(data=self.movie_1_data)
         if movie_1.is_valid():
             movie_1.save()
-        response = self.client.get("/api/movies")
+        response = self.client.get("/api/movies/")
         self.assertEqual(response.status_code, requests.codes.ok)
         response_serialized = MovieSerializer(data=response.data, many=True)
         self.assertTrue(response_serialized.is_valid())
@@ -235,7 +237,7 @@ class MovieRemoteRequestsTestCase(TestCase):
         movie_2 = MovieSerializer(data=self.movie_2_data)
         if movie_2.is_valid():
             movie_2.save()
-        response = self.client.get("/api/movies")
+        response = self.client.get("/api/movies/")
         self.assertEqual(response.status_code, requests.codes.ok)
         response_serialized = MovieSerializer(data=response.data, many=True)
         self.assertTrue(response_serialized.is_valid())
@@ -255,7 +257,7 @@ class MovieRemoteRequestsTestCase(TestCase):
         movie_2 = MovieSerializer(data=self.movie_2_data)
         if movie_2.is_valid():
             movie_2.save()
-        response = self.client.get("/api/movies", data={"order": "dsc"})
+        response = self.client.get("/api/movies/", data={"order": "dsc"})
         print(response.data)
         first_id = response.data[0]["id"]
         second_id = response.data[1]["id"]
@@ -264,45 +266,38 @@ class MovieRemoteRequestsTestCase(TestCase):
         )
         self.assertTrue(response.data[0]["id"] > response.data[1]["id"])
 
-    def client_get_by_order_dsc_with_bad_parameter(self):
-        # TODO not working - can't pass data with GET request, but working normally when server start
-        response = self.client.get("/api/movies", data={"order": "SomeInvalidText"})
-        self.assertTrue(response.data["Error"])
-
     def test_client_post_request_movie_with_good_data(self):
-        response = self.client.post("/api/movies", {"title": "Batman"}, format="json")
+        response = self.client.post("/api/movies/", {"title": "Batman"}, format="json")
         self.assertEqual(response.status_code, requests.codes.ok)
         self.assertEqual(response.data["Title"], "Batman")
 
     def test_client_post_request_nonexistent_movie(self):
         response = self.client.post(
-            "/api/movies", {"title": "SomeNonExistingMovie"}, format="json"
+            "/api/movies/", {"title": "SomeNonExistingMovie"}, format="json"
         )
-        self.assertEqual(response.status_code, requests.codes.no_content)
-        self.assertTrue(response.data["Error"])
+        self.assertEqual(response.status_code, requests.codes.not_found)
 
     def test_client_post_request_movie_with_bad_data(self):
         response = self.client.post(
-            "/api/movies", {"title_name": "Batman"}, format="json"
+            "/api/movies/", {"title_name": "Batman"}, format="json"
         )
         self.assertEqual(response.status_code, requests.codes.bad_request)
-        self.assertTrue(response.data["Error"])
 
     def test_save_movie_to_database_after_first_post(self):
         old_count = Movie.objects.all().count()
-        self.client.post("/api/movies", {"title": "Batman"}, format="json")
+        self.client.post("/api/movies/", {"title": "Batman"}, format="json")
         new_count = Movie.objects.all().count()
         self.assertNotEqual(old_count, new_count)
 
     def test_get_from_db_when_post_movie_existing_in_db(self):  # TODO check, why error
-        self.client.post("/api/movies", {"title": "Batman"}, format="json")
+        self.client.post("/api/movies/", {"title": "Batman"}, format="json")
         old_count = Movie.objects.all().count()
         second_post = self.client.post(
-            "/api/movies", {"title": "Batman"}, format="json"
+            "/api/movies/", {"title": "Batman"}, format="json"
         )
         new_count = Movie.objects.all().count()
         self.assertEqual(old_count, new_count)
-        self.assertEqual(Movie.objects.get(id=1).Title, second_post.data["Title"])
+        self.assertEqual(Movie.objects.get(id=1).title, second_post.data["Title"])
 
 
 class CommentsRequestsTestCase(TestCase):
@@ -372,59 +367,55 @@ class CommentsRequestsTestCase(TestCase):
         }
         self.movie_1 = MovieSerializer(data=self.movie_1_data)
         self.assertTrue(self.movie_1.is_valid())
-        self.movie_1.save()
+        self.movie_1 = self.movie_1.save()
         self.movie_2 = MovieSerializer(data=self.movie_2_data)
         self.assertTrue(self.movie_2.is_valid())
-        self.movie_2.save()
+        self.movie_2 = self.movie_2.save()
 
     def test_add_comment_to_existing_movie(self):
         """Add one comment for movie_1 and one comment for movie_2.
         Assert comment return in response"""
         old_count = Comment.objects.all().count()
         response1 = self.client.post(
-            "/api/comments",
-            {"comment_body": "Test1", "movie_id": self.movie_1.data["id"]},
+            "/api/comments/",
+            {"body": "Test1", "movie": self.movie_1.id},
             format="json",
         )
         response2 = self.client.post(
-            "/api/comments",
-            {"comment_body": "Test2", "movie_id": self.movie_2.data["id"]},
+            "/api/comments/",
+            {"body": "Test2", "movie": self.movie_2.id},
             format="json",
         )
         self.assertEqual(Comment.objects.all().count() - old_count, 2)
+        self.assertEqual(Comment.objects.get(id=response1.data["id"]).body, "Test1")
         self.assertEqual(
-            Comment.objects.get(id=response1.data["id"]).comment_body, "Test1"
+            Comment.objects.get(id=response1.data["id"]).movie.id,
+            self.movie_1.id,
         )
+        self.assertEqual(Comment.objects.get(id=response2.data["id"]).body, "Test2")
         self.assertEqual(
-            Comment.objects.get(id=response1.data["id"]).movie_id.id,
-            self.movie_1.data["id"],
-        )
-        self.assertEqual(
-            Comment.objects.get(id=response2.data["id"]).comment_body, "Test2"
-        )
-        self.assertEqual(
-            Comment.objects.get(id=response2.data["id"]).movie_id.id,
-            self.movie_2.data["id"],
+            Comment.objects.get(id=response2.data["id"]).movie.id,
+            self.movie_2.id,
         )
 
     def test_add_comment_to_nonexistent_movie(self):
         response = self.client.post(
-            "/api/comments", {"comment_body": "Test1", "movie_id": 5890}, format="json"
+            "/api/comments/", {"body": "Test1", "movie": 5890}, format="json"
         )
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(Comment.objects.filter(comment_body="Test1").count(), 0)
+        self.assertEqual(Comment.objects.filter(body="Test1").count(), 0)
 
     def test_add_comment_with_bad_request(self):
         response_bad_body = self.client.post(
-            "/api/comments",
-            {"comment_body_but_bad": "Test2", "movie_id": self.movie_1.data["id"]},
+            "/api/comments/",
+            {"comment_body_but_bad": "Test2", "movie": self.movie_1.id},
             format="json",
         )
         response_bad_movie_id = self.client.post(
-            "/api/comments",
+            "/api/comments/",
             {
                 "comment_body_but_bad": "Test2",
-                "movie_id_but_bad": self.movie_1.data["id"],
+                "movie_id_but_bad": self.movie_1.id,
             },
             format="json",
         )
@@ -434,39 +425,39 @@ class CommentsRequestsTestCase(TestCase):
     def test_add_comment_that_breaking_serializer_with_too_long_body(self):
         too_long_comment = "x" * 101
         response = self.client.post(
-            "/api/comments",
-            {"comment_body": too_long_comment, "movie_id": self.movie_1.data["id"]},
+            "/api/comments/",
+            {"body": too_long_comment, "movie": self.movie_1.id},
             format="json",
         )
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 400)
 
     def test_get_comments_for_movie(self):
         comment1_1 = Comment(
-            comment_body="Movie1Test1",
-            movie_id=Movie.objects.get(id=self.movie_1.data["id"]),
+            body="Movie1Test1",
+            movie=Movie.objects.get(id=self.movie_1.id),
         )
         comment1_1.save()
         comment1_2 = Comment(
-            comment_body="Movie1Test2",
-            movie_id=Movie.objects.get(id=self.movie_1.data["id"]),
+            body="Movie1Test2",
+            movie=Movie.objects.get(id=self.movie_1.id),
         )
         comment1_2.save()
         comment2_1 = Comment(
-            comment_body="Movie2Test1",
-            movie_id=Movie.objects.get(id=self.movie_2.data["id"]),
+            body="Movie2Test1",
+            movie=Movie.objects.get(id=self.movie_2.id),
         )
         comment2_1.save()
         comment2_2 = Comment(
-            comment_body="Movie2Test2",
-            movie_id=Movie.objects.get(id=self.movie_2.data["id"]),
+            body="Movie2Test2",
+            movie=Movie.objects.get(id=self.movie_2.id),
         )
         comment2_2.save()
         comment2_3 = Comment(
-            comment_body="Movie2Test3",
-            movie_id=Movie.objects.get(id=self.movie_2.data["id"]),
+            body="Movie2Test3",
+            movie=Movie.objects.get(id=self.movie_2.id),
         )
         comment2_3.save()
-        response = self.client.get("/api/comments", format="json")
+        response = self.client.get("/api/comments/", format="json")
         self.assertEqual(len(response.data), 5)
 
     def get_comments_with_movie_id(self):
@@ -474,21 +465,21 @@ class CommentsRequestsTestCase(TestCase):
         old_count = Comment.objects.all().count()
         comment1_1 = Comment(
             comment_body="Movie1Test1",
-            movie_id=Movie.objects.get(id=self.movie_1.data["id"]),
+            movie_id=Movie.objects.get(id=self.movie_1.id),
         )
         comment1_1.save()
         comment1_2 = Comment(
             comment_body="Movie1Test2",
-            movie_id=Movie.objects.get(id=self.movie_1.data["id"]),
+            movie=Movie.objects.get(id=self.movie_1.id),
         )
         comment1_2.save()
         comment2_1 = Comment(
             comment_body="Movie2Test1",
-            movie_id=Movie.objects.get(id=self.movie_2.data["id"]),
+            movie=Movie.objects.get(id=self.movie_2.id),
         )
         comment2_1.save()
         response = self.client.get(
-            "/api/comments", {"movie_id": self.movie_1.data["id"]}, format="json"
+            "/api/comments/", {"movie_id": self.movie_1.id}, format="json"
         )
         self.assertEqual(len(response.data), 2)
         new_count = Comment.objects.all().count()
@@ -497,7 +488,7 @@ class CommentsRequestsTestCase(TestCase):
     def try_get_comment_from_movie_with_no_comments(self):
         # not working - can't pass data with GET request, but working normally when server start
         response = self.client.get(
-            "/api/comments", {"movie_id": self.movie_1.data["id"]}, format="json"
+            "/api/comments/", {"movie_id": self.movie_1.id}, format="json"
         )
         self.assertEqual(response.status_code, 400)
 
