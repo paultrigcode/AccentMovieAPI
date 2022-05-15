@@ -4,11 +4,9 @@ from rest_framework import filters, mixins, status, viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
-from .client import (MovieAPIConnectionException, MovieAPINotFoundException,
-                     fetch_movie)
+from .client import MovieAPIConnectionException, MovieAPINotFoundException, fetch_movie
 from .models import Comment, Movie
-from .serializers import (CommentSerializer, MovieInputSerializer,
-                          MovieSerializer)
+from .serializers import CommentSerializer, MovieInputSerializer, MovieSerializer
 
 
 class MovieViewSet(
