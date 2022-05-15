@@ -24,6 +24,7 @@ TO set up the project, run the following command
 - `git clone https://github.com/paultrigcode/AccentMovieAPI.git`
 - `cd  into_the_project_folder`
 - `python3 -m venv env`
+- `pip install -r requirements.txt`
 - `python manage.py migrate`
 - `python manage.py runserver`
 
